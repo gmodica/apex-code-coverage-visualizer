@@ -77,7 +77,7 @@ export class CodeCoverage implements Disposable {
             //this.statusBarItem.color = new ThemeColor("editorOverviewRuler.errorForeground");
         }
 
-        this.statusBarItem.text = `$(microscope) ${coverage}% ${icon}`;
+        this.statusBarItem.text = `$(microscope) ${Math.round(coverage)}% ${icon}`;
         this.statusBarItem.tooltip = `${coverage}% coverage`;
     }
 
@@ -210,9 +210,11 @@ export class CodeCoveragePanel {
 					colorClass = "bg-success";
 				}
 
+				let coverage : string = Math.round(item.coveredPercent).toString();
+
 				content += `
 					<tr>
-						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${item.coveredPercent}%;" aria-valuenow="${item.coveredPercent}" aria-valuemin="0" aria-valuemax="100">${item.coveredPercent}%</div></div></td>
+						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
 					</tr>`;
 			});
 			content += `
