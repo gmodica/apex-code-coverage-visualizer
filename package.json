@@ -15,8 +15,7 @@
 		"theme": "light"
 	},
 	"version": "0.1.0",
-	"publisher": "salesforce",
-	"license": "BSD-3-Clause",
+	"publisher": "modicatech",
 	"engines": {
 		"vscode": "^1.46.0"
 	},
