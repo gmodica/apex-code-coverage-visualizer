@@ -23,22 +23,22 @@ After that, just execute some tests as you normally would from the Test view:
 Once the test coverage has been downloaded by the Salesforce CLI, you can now see the code coverage for a specific Apex file in the status bar, and also the overall code coverage in a new window:
 
 #### Coverage in Status Bar
-![Coverage in Status Bar](images\coverage-apex.png)
+![Coverage in Status Bar](images/coverage-apex.png)
 
 The indicator in the status bar will only appear if the Apex class has tests coverage downloaded for such class. You can see three indicators, depending on the coverage percentage:
 
 |Coverage|Indicator|
 |-|-|
-|0% - 65%|![Coverage Poor](images\coverage-poor.png)|
-|65% - 75%|![Coverage Low](images\coverage-low.png)|
-|75% - 100%|![Coverage Low](images\coverage-good.png)|
+|0% - 65%|![Coverage Poor](images/coverage-poor.png)|
+|65% - 75%|![Coverage Low](images/coverage-low.png)|
+|75% - 100%|![Coverage Low](images/coverage-good.png)|
 
 #### Coverage Window
-![Coverage in Status Bar](images\coverage-summary.png)
+![Coverage in Status Bar](images/coverage-summary.png)
 
 You can get to this window by either clicking on the coverage indicator on the status bar, or by executing the **SFDX: Show Code Coverage** from the command palette:
 
-![SFDX: Show Code Coverage](images\coverage-command.png)
+![SFDX: Show Code Coverage](images/coverage-command.png)
 
 ## Bugs and Feedback
 
