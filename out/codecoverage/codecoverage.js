@@ -60,6 +60,9 @@ exports.CodeCoverage = CodeCoverage;
 class CodeCoveragePanel {
     constructor(panel, extensionPath) {
         this._disposables = [];
+        this._codeCoverage = null;
+        this._fileNameFilter = '';
+        this._lowCoverageFilter = false;
         this._panel = panel;
         this._extensionPath = extensionPath;
         // Set the webview's initial html content
@@ -76,9 +79,18 @@ class CodeCoveragePanel {
         }, null, this._disposables);
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(message => {
+            console.log('Message ' + message.command);
             switch (message.command) {
                 case 'alert':
                     vscode_1.window.showErrorMessage(message.text);
+                    return;
+                case 'filterapex':
+                    this._fileNameFilter = message.filter;
+                    this.updateHtmlForWebView();
+                    return;
+                case 'filterlowcoverage':
+                    this._lowCoverageFilter = message.filter;
+                    this.updateHtmlForWebView();
                     return;
             }
         }, null, this._disposables);
@@ -106,18 +118,36 @@ class CodeCoveragePanel {
     }
     setHtmlForWebview() {
         console.log('getting code coverage');
+        const codeCoverage = getCoverageData();
+        this._codeCoverage = codeCoverage;
         //this._panel.iconPath = Uri.file()
         this._panel.title = "Code Coverage";
-        this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '');
+        this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
     }
-    getHtmlForWebview(webview, path) {
+    updateHtmlForWebView() {
+        const codeCoverage = this._codeCoverage || getCoverageData();
+        this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+    }
+    getHtmlForWebview(webview, path, codeCoverage) {
         let content = '';
-        const codeCoverage = getCoverageData();
         if (!codeCoverage) {
             content = '<h2>No test coverage data exists. Please run tests to generate test coverage data</h2>';
         }
         else {
             content += `
+			<div style="margin: 20px; margin-bottom: 30px;">
+				<form>
+					<div class="form-row">
+						<div class="col">
+							<input class="form-check-input" type="checkbox" ${this._lowCoverageFilter ? 'checked ' : ''} id="lowCoverageFilter" onchange="filterLowCodeCoverage()" />
+							<label class="form-check-label" for="lowCoverageFilter">Show only classes with coverage below 75%</label>
+						</div>
+						<div class="col">
+							<input type="text" class="form-control" id="filterapex" placeholder="Filter by file name contains" oninput="filterFileName()" value="${this._fileNameFilter}" />
+						</div>
+					</div>
+				</form>
+			</div>
 			<table class="table table-striped">
 				<thead>
 					<tr>
@@ -129,6 +159,12 @@ class CodeCoveragePanel {
             codeCoverage.coverage.coverage.sort((item1, item2) => {
                 return item1.name.localeCompare(item2.name);
             }).forEach((item) => {
+                if (this._lowCoverageFilter && item.coveredPercent >= 75) {
+                    return;
+                }
+                if (this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
+                    return;
+                }
                 let colorClass = "";
                 if (item.coveredPercent < 60) {
                     colorClass = "bg-danger";
@@ -169,6 +205,36 @@ class CodeCoveragePanel {
 					<h1>Apex Code Coverage</h1>
 				${content}
 				</div>
+
+				<script>
+					const vscode = acquireVsCodeApi();
+					var handler;
+
+					function filterLowCodeCoverage() {
+						const checkbox = document.getElementById('lowCoverageFilter');
+
+						vscode.postMessage({
+							command: 'filterlowcoverage',
+							filter: checkbox.checked
+						});
+					}
+
+					function filterFileName() {
+						if(handler) {
+							clearTimeout(handler);
+						}
+						handler = setTimeout(filter, 300);
+					}
+
+					function filter() {
+						handler = null;
+						const text = document.getElementById('filterapex');
+						vscode.postMessage({
+							command: 'filterapex',
+							filter: text.value
+						});
+					}
+				</script>
             </body>
             </html>`;
     }

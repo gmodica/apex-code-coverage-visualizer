@@ -96,6 +96,9 @@ export class CodeCoveragePanel {
 	private readonly _panel: WebviewPanel;
 	private readonly _extensionPath: string;
 	private _disposables: Disposable[] = [];
+	private _codeCoverage: CoverageTestResult | null = null;
+	private _fileNameFilter: string | null = '';
+	private _lowCoverageFilter: boolean = false;
 
 	private constructor(panel: WebviewPanel, extensionPath: string) {
 		this._panel = panel;
@@ -123,9 +126,19 @@ export class CodeCoveragePanel {
 		// Handle messages from the webview
 		this._panel.webview.onDidReceiveMessage(
 			message => {
+				console.log('Message ' + message.command);
+
 				switch (message.command) {
 					case 'alert':
 						window.showErrorMessage(message.text);
+						return;
+					case 'filterapex':
+						this._fileNameFilter = message.filter;
+						this.updateHtmlForWebView();
+						return;
+					case 'filterlowcoverage':
+						this._lowCoverageFilter = message.filter;
+						this.updateHtmlForWebView();
 						return;
 				}
 			},
@@ -173,20 +186,40 @@ export class CodeCoveragePanel {
 
 	public setHtmlForWebview() {
 		console.log('getting code coverage');
+		const codeCoverage: CoverageTestResult | null = getCoverageData();
+		this._codeCoverage = codeCoverage;
+
 		//this._panel.iconPath = Uri.file()
 		this._panel.title = "Code Coverage";
-		this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '');
+		this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
 	}
 
-	private getHtmlForWebview(webview: Webview, path: string) {
+	public updateHtmlForWebView() {
+		const codeCoverage: CoverageTestResult | null = this._codeCoverage || getCoverageData();
+		this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+	}
+
+	private getHtmlForWebview(webview: Webview, path: string, codeCoverage: CoverageTestResult | null) {
 		let content :string = '';
 
-		const codeCoverage: CoverageTestResult | null = getCoverageData();
 		if(!codeCoverage) {
 			content = '<h2>No test coverage data exists. Please run tests to generate test coverage data</h2>';
 		}
 		else {
 			content +=`
+			<div style="margin: 20px; margin-bottom: 30px;">
+				<form>
+					<div class="form-row">
+						<div class="col">
+							<input class="form-check-input" type="checkbox" ${this._lowCoverageFilter ? 'checked ' : ''} id="lowCoverageFilter" onchange="filterLowCodeCoverage()" />
+							<label class="form-check-label" for="lowCoverageFilter">Show only classes with coverage below 75%</label>
+						</div>
+						<div class="col">
+							<input type="text" class="form-control" id="filterapex" placeholder="Filter by file name contains" oninput="filterFileName()" value="${this._fileNameFilter}" />
+						</div>
+					</div>
+				</form>
+			</div>
 			<table class="table table-striped">
 				<thead>
 					<tr>
@@ -199,6 +232,13 @@ export class CodeCoveragePanel {
 			codeCoverage.coverage.coverage.sort((item1, item2) => {
 				return item1.name.localeCompare(item2.name);
 			}).forEach((item: CoverageItem) => {
+				if(this._lowCoverageFilter && item.coveredPercent >= 75) {
+					return;
+				}
+
+				if(this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
+					return;
+				}
 
 				let colorClass : string = "";
 
@@ -242,6 +282,36 @@ export class CodeCoveragePanel {
 					<h1>Apex Code Coverage</h1>
 				${content}
 				</div>
+
+				<script>
+					const vscode = acquireVsCodeApi();
+					var handler;
+
+					function filterLowCodeCoverage() {
+						const checkbox = document.getElementById('lowCoverageFilter');
+
+						vscode.postMessage({
+							command: 'filterlowcoverage',
+							filter: checkbox.checked
+						});
+					}
+
+					function filterFileName() {
+						if(handler) {
+							clearTimeout(handler);
+						}
+						handler = setTimeout(filter, 300);
+					}
+
+					function filter() {
+						handler = null;
+						const text = document.getElementById('filterapex');
+						vscode.postMessage({
+							command: 'filterapex',
+							filter: text.value
+						});
+					}
+				</script>
             </body>
             </html>`;
 	}

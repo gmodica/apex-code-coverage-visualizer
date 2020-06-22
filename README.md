@@ -40,6 +40,11 @@ You can get to this window by either clicking on the coverage indicator on the s
 
 ![SFDX: Show Code Coverage](images/coverage-command.png)
 
+#### Filtering
+It is possible to filter down the test results to show only tests that are below the required 75% coverage, to allow the developer to focus on those tests that require inmediate action. Also, it is posible to filter further down on the name of the apex file:
+
+![Filter](images/coverage-filter.png)
+
 ## Bugs and Feedback
 
 To report issues with Salesforce Extensions for VS Code, open a [bug on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Bug_report.md). If you would like to suggest a feature, create a [feature request on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Feature_request.md).
