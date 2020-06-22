@@ -1,5 +1,5 @@
 # Change Log
 
-## [0.2.0]
+## [0.9.0]
 
 - Initial release
