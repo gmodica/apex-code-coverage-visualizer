@@ -1,0 +1,1 @@
+export { CodeCoverage, CodeCoveragePanel } from './codecoverage';
