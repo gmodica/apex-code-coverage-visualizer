@@ -49,7 +49,7 @@ class CodeCoverage {
             icon = "$(check)";
             //this.statusBarItem.color = new ThemeColor("editorOverviewRuler.errorForeground");
         }
-        this.statusBarItem.text = `$(microscope) ${coverage}% ${icon}`;
+        this.statusBarItem.text = `$(microscope) ${Math.round(coverage)}% ${icon}`;
         this.statusBarItem.tooltip = `${coverage}% coverage`;
     }
     dispose() {
@@ -139,9 +139,10 @@ class CodeCoveragePanel {
                 else {
                     colorClass = "bg-success";
                 }
+                let coverage = Math.round(item.coveredPercent).toString();
                 content += `
 					<tr>
-						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${item.coveredPercent}%;" aria-valuenow="${item.coveredPercent}" aria-valuemin="0" aria-valuemax="100">${item.coveredPercent}%</div></div></td>
+						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
 					</tr>`;
             });
             content += `
