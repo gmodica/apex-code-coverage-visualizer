@@ -50,7 +50,8 @@ It is possible to filter down the test results to show only tests that are below
 To report issues with Salesforce Extensions for VS Code, open a [bug on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Bug_report.md). If you would like to suggest a feature, create a [feature request on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Feature_request.md).
 
 
-
+## License
+This project is licensed under the terms of the [MIT license](LICENSE.md).
 
 
 

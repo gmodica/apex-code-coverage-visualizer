@@ -9,6 +9,7 @@
 	"repository": {
 		"url": "https://github.com/gmodica/apex-code-coverage-visualizer"
 	},
+	"license": "MIT",
 	"icon": "images/Logo.png",
 	"galleryBanner": {
 		"color": "#ECECEC",
