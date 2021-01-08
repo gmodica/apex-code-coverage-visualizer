@@ -1,10 +1,21 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CodeCoveragePanel = exports.CodeCoverage = void 0;
 const fs = require("fs");
 const path = require("path");
 const vscode_1 = require("vscode");
 const apexDirPath = path.join(vscode_1.workspace.workspaceFolders[0].uri.fsPath, ".sfdx", "tools", "testresults", "apex");
+const apexClassesDirPath = path.join(vscode_1.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "classes");
+const apexTriggersDirPath = path.join(vscode_1.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "triggers");
 class CodeCoverage {
     constructor() {
         this.statusBarItem = vscode_1.window.createStatusBarItem();
@@ -63,6 +74,7 @@ class CodeCoveragePanel {
         this._codeCoverage = null;
         this._fileNameFilter = '';
         this._lowCoverageFilter = false;
+        this._projectFilesOnlyFilter = true;
         this._panel = panel;
         this._extensionPath = extensionPath;
         // Set the webview's initial html content
@@ -79,7 +91,6 @@ class CodeCoveragePanel {
         }, null, this._disposables);
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(message => {
-            console.log('Message ' + message.command);
             switch (message.command) {
                 case 'alert':
                     vscode_1.window.showErrorMessage(message.text);
@@ -90,6 +101,10 @@ class CodeCoveragePanel {
                     return;
                 case 'filterlowcoverage':
                     this._lowCoverageFilter = message.filter;
+                    this.updateHtmlForWebView();
+                    return;
+                case 'filterprojectsfilesonly':
+                    this._projectFilesOnlyFilter = message.filter;
                     this.updateHtmlForWebView();
                     return;
             }
@@ -117,24 +132,28 @@ class CodeCoveragePanel {
         CodeCoveragePanel.currentPanel = new CodeCoveragePanel(panel, extensionPath);
     }
     setHtmlForWebview() {
-        console.log('getting code coverage');
-        const codeCoverage = getCoverageData();
-        this._codeCoverage = codeCoverage;
-        //this._panel.iconPath = Uri.file()
-        this._panel.title = "Code Coverage";
-        this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+        return __awaiter(this, void 0, void 0, function* () {
+            const codeCoverage = getCoverageData();
+            this._codeCoverage = codeCoverage;
+            //this._panel.iconPath = Uri.file()
+            this._panel.title = "Code Coverage";
+            this._panel.webview.html = yield this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+        });
     }
     updateHtmlForWebView() {
-        const codeCoverage = this._codeCoverage || getCoverageData();
-        this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+        return __awaiter(this, void 0, void 0, function* () {
+            const codeCoverage = this._codeCoverage || getCoverageData();
+            this._panel.webview.html = yield this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+        });
     }
-    getHtmlForWebview(webview, path, codeCoverage) {
-        let content = '';
-        if (!codeCoverage) {
-            content = '<h2>No test coverage data exists. Please run tests to generate test coverage data</h2>';
-        }
-        else {
-            content += `
+    getHtmlForWebview(webview, viewpath, codeCoverage) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let content = '';
+            if (!codeCoverage) {
+                content = '<h2>No test coverage data exists. Please run tests to generate test coverage data</h2>';
+            }
+            else {
+                content += `
 			<div style="margin: 20px; margin-bottom: 30px;">
 				<form>
 					<div class="form-row">
@@ -144,6 +163,12 @@ class CodeCoveragePanel {
 						</div>
 						<div class="col">
 							<input type="text" class="form-control" id="filterapex" placeholder="Filter by file name contains" oninput="filterFileName()" value="${this._fileNameFilter}" />
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="col">
+							<input class="form-check-input" type="checkbox" ${this._projectFilesOnlyFilter ? 'checked ' : ''} id="projectFilesOnlyFilter" onchange="filterProjectFilesOnly()" />
+							<label class="form-check-label" for="lowCoverageFilter">Show only classes in this project</label>
 						</div>
 					</div>
 				</form>
@@ -156,36 +181,71 @@ class CodeCoveragePanel {
 					</tr>
 				</thead>
 				<tbody>`;
-            codeCoverage.coverage.coverage.sort((item1, item2) => {
-                return item1.name.localeCompare(item2.name);
-            }).forEach((item) => {
-                if (this._lowCoverageFilter && item.coveredPercent >= 75) {
-                    return;
-                }
-                if (this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
-                    return;
-                }
-                let colorClass = "";
-                if (item.coveredPercent < 60) {
-                    colorClass = "bg-danger";
-                }
-                else if (item.coveredPercent < 75) {
-                    colorClass = "bg-warning";
-                }
-                else {
-                    colorClass = "bg-success";
-                }
-                let coverage = Math.round(item.coveredPercent).toString();
-                content += `
+                codeCoverage.coverage.coverage.sort((item1, item2) => {
+                    return item1.name.localeCompare(item2.name);
+                }).forEach((item) => {
+                    if (this._lowCoverageFilter && item.coveredPercent >= 75) {
+                        return;
+                    }
+                    const apexClassFile = path.join(apexClassesDirPath, `${item.name}.cls`);
+                    const apexTriggerFile = path.join(apexTriggersDirPath, `${item.name}.trigger`);
+                    if (this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
+                        return;
+                    }
+                    if (this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
+                        return;
+                    }
+                    let colorClass = "";
+                    if (item.coveredPercent < 60) {
+                        colorClass = "bg-danger";
+                    }
+                    else if (item.coveredPercent < 75) {
+                        colorClass = "bg-warning";
+                    }
+                    else {
+                        colorClass = "bg-success";
+                    }
+                    let coverage = Math.round(item.coveredPercent).toString();
+                    content += `
 					<tr>
 						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
 					</tr>`;
-            });
-            content += `
+                });
+                const fsPromises = fs.promises;
+                const classes = yield fsPromises.readdir(apexClassesDirPath);
+                classes.forEach(function (file) {
+                    if (!file.endsWith('.cls'))
+                        return;
+                    const apexClass = file.replace(".cls", "");
+                    const isTestClass = codeCoverage.tests.find((item) => item.ApexClass.Name == apexClass);
+                    if (isTestClass !== undefined)
+                        return;
+                    const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+                    if (found === undefined) {
+                        content += `
+						<tr>
+							<td>${apexClass}</td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage information</div></div></td>
+						</tr>`;
+                    }
+                });
+                const triggers = yield fsPromises.readdir(apexTriggersDirPath);
+                triggers.forEach(function (file) {
+                    if (!file.endsWith('.trigger'))
+                        return;
+                    const apexClass = file.replace(".trigger", "");
+                    const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+                    if (found === undefined) {
+                        content += `
+						<tr>
+						<td>${apexClass}</td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage information</div></div></td>
+						</tr>`;
+                    }
+                });
+                content += `
 				</tbody>
 			</table>`;
-        }
-        return `<!DOCTYPE html>
+            }
+            return `<!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
@@ -219,6 +279,16 @@ class CodeCoveragePanel {
 						});
 					}
 
+					function filterProjectFilesOnly() {
+						const checkbox = document.getElementById('projectFilesOnlyFilter');
+
+						vscode.postMessage({
+							command: 'filterprojectsfilesonly',
+							filter: checkbox.checked
+						});
+					}
+
+
 					function filterFileName() {
 						if(handler) {
 							clearTimeout(handler);
@@ -237,6 +307,7 @@ class CodeCoveragePanel {
 				</script>
             </body>
             </html>`;
+        });
     }
     dispose() {
         CodeCoveragePanel.currentPanel = undefined;

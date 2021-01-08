@@ -15,7 +15,7 @@
 		"color": "#ECECEC",
 		"theme": "light"
 	},
-	"version": "0.9.2",
+	"version": "0.9.3",
 	"publisher": "modicatech",
 	"engines": {
 		"vscode": "^1.46.0"

@@ -23,6 +23,22 @@ const apexDirPath = path.join(
     "apex"
 );
 
+const apexClassesDirPath = path.join(
+	workspace!.workspaceFolders![0].uri.fsPath,
+	"force-app",
+	"main",
+	"default",
+	"classes"
+);
+
+const apexTriggersDirPath = path.join(
+	workspace!.workspaceFolders![0].uri.fsPath,
+	"force-app",
+	"main",
+	"default",
+	"triggers"
+);
+
 export class CodeCoverage implements Disposable {
     private statusBarItem: StatusBarItem;
 
@@ -99,6 +115,7 @@ export class CodeCoveragePanel {
 	private _codeCoverage: CoverageTestResult | null = null;
 	private _fileNameFilter: string | null = '';
 	private _lowCoverageFilter: boolean = false;
+	private _projectFilesOnlyFilter: boolean = true;
 
 	private constructor(panel: WebviewPanel, extensionPath: string) {
 		this._panel = panel;
@@ -126,8 +143,6 @@ export class CodeCoveragePanel {
 		// Handle messages from the webview
 		this._panel.webview.onDidReceiveMessage(
 			message => {
-				console.log('Message ' + message.command);
-
 				switch (message.command) {
 					case 'alert':
 						window.showErrorMessage(message.text);
@@ -140,6 +155,10 @@ export class CodeCoveragePanel {
 						this._lowCoverageFilter = message.filter;
 						this.updateHtmlForWebView();
 						return;
+					case 'filterprojectsfilesonly':
+							this._projectFilesOnlyFilter = message.filter;
+							this.updateHtmlForWebView();
+							return;
 				}
 			},
 			null,
@@ -184,22 +203,21 @@ export class CodeCoveragePanel {
 		CodeCoveragePanel.currentPanel = new CodeCoveragePanel(panel, extensionPath);
 	}
 
-	public setHtmlForWebview() {
-		console.log('getting code coverage');
+	public async setHtmlForWebview() {
 		const codeCoverage: CoverageTestResult | null = getCoverageData();
 		this._codeCoverage = codeCoverage;
 
 		//this._panel.iconPath = Uri.file()
 		this._panel.title = "Code Coverage";
-		this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+		this._panel.webview.html = await this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
 	}
 
-	public updateHtmlForWebView() {
+	public async updateHtmlForWebView() {
 		const codeCoverage: CoverageTestResult | null = this._codeCoverage || getCoverageData();
-		this._panel.webview.html = this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
+		this._panel.webview.html = await this.getHtmlForWebview(this._panel.webview, '', codeCoverage);
 	}
 
-	private getHtmlForWebview(webview: Webview, path: string, codeCoverage: CoverageTestResult | null) {
+	private async getHtmlForWebview(webview: Webview, viewpath: string, codeCoverage: CoverageTestResult | null) {
 		let content :string = '';
 
 		if(!codeCoverage) {
@@ -218,6 +236,12 @@ export class CodeCoveragePanel {
 							<input type="text" class="form-control" id="filterapex" placeholder="Filter by file name contains" oninput="filterFileName()" value="${this._fileNameFilter}" />
 						</div>
 					</div>
+					<div class="form-row">
+						<div class="col">
+							<input class="form-check-input" type="checkbox" ${this._projectFilesOnlyFilter ? 'checked ' : ''} id="projectFilesOnlyFilter" onchange="filterProjectFilesOnly()" />
+							<label class="form-check-label" for="lowCoverageFilter">Show only classes in this project</label>
+						</div>
+					</div>
 				</form>
 			</div>
 			<table class="table table-striped">
@@ -233,6 +257,12 @@ export class CodeCoveragePanel {
 				return item1.name.localeCompare(item2.name);
 			}).forEach((item: CoverageItem) => {
 				if(this._lowCoverageFilter && item.coveredPercent >= 75) {
+					return;
+				}
+
+				const apexClassFile = path.join(apexClassesDirPath, `${item.name}.cls`);
+				const apexTriggerFile = path.join(apexTriggersDirPath, `${item.name}.trigger`);
+				if(this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
 					return;
 				}
 
@@ -257,6 +287,35 @@ export class CodeCoveragePanel {
 						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
 					</tr>`;
 			});
+
+			const fsPromises = fs.promises;
+			const classes = await fsPromises.readdir(apexClassesDirPath);
+			classes.forEach(function (file) {
+				if(!file.endsWith('.cls')) return;
+				const apexClass = file.replace(".cls","");
+				const isTestClass = codeCoverage.tests.find((item) => item.ApexClass.Name == apexClass);
+				if(isTestClass !== undefined) return;
+				const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+				if(found === undefined) {
+					content += `
+						<tr>
+							<td>${apexClass}</td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage information</div></div></td>
+						</tr>`;
+				}
+			});
+			const triggers = await fsPromises.readdir(apexTriggersDirPath);
+			triggers.forEach(function (file) {
+				if(!file.endsWith('.trigger')) return;
+				const apexClass = file.replace(".trigger","");
+				const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+				if(found === undefined) {
+					content += `
+						<tr>
+						<td>${apexClass}</td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage information</div></div></td>
+						</tr>`;
+				}
+			});
+
 			content += `
 				</tbody>
 			</table>`;
@@ -295,6 +354,16 @@ export class CodeCoveragePanel {
 							filter: checkbox.checked
 						});
 					}
+
+					function filterProjectFilesOnly() {
+						const checkbox = document.getElementById('projectFilesOnlyFilter');
+
+						vscode.postMessage({
+							command: 'filterprojectsfilesonly',
+							filter: checkbox.checked
+						});
+					}
+
 
 					function filterFileName() {
 						if(handler) {
@@ -377,7 +446,8 @@ function getCoverageForCurrentEditor() :number | null {
 type CoverageTestResult = {
     coverage: {
         coverage: CoverageItem[];
-    };
+	};
+	tests: TestItem[];
 };
 
 type CoverageItem = {
@@ -385,5 +455,14 @@ type CoverageItem = {
     name: string;
     totalLines: number;
     totalCovered: number;
-    coveredPercent: number;
+	coveredPercent: number;
+	isProjectFile: boolean;
 };
+
+type TestItem = {
+	ApexClass: ApexClassItem;
+}
+
+type ApexClassItem = {
+	Name: string;
+}
