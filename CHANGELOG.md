@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.4]
+
+- Fixed issues with new format of tests results in SFDX
+
 ## [0.9.3]
 
 - Added filtering to show only files in current project

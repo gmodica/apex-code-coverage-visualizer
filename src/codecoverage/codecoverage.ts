@@ -253,49 +253,43 @@ export class CodeCoveragePanel {
 				</thead>
 				<tbody>`;
 
-			codeCoverage.coverage.coverage.sort((item1, item2) => {
-				return item1.name.localeCompare(item2.name);
-			}).forEach((item: CoverageItem) => {
-				if(this._lowCoverageFilter && item.coveredPercent >= 75) {
-					return;
-				}
+			if(codeCoverage.coverage) {
+				codeCoverage.coverage.coverage.sort((item1, item2) => {
+					return item1.name.localeCompare(item2.name);
+				}).forEach((item: CoverageItem) => {
+					const className : string | null = item.name;
+					const percentage : number = item.coveredPercent;
 
-				const apexClassFile = path.join(apexClassesDirPath, `${item.name}.cls`);
-				const apexTriggerFile = path.join(apexTriggersDirPath, `${item.name}.trigger`);
-				if(this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
-					return;
-				}
+					const contentItem : string | null = this.calculateHtmlForItem(className, percentage);
+					if(!contentItem) return;
 
-				if(this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
-					return;
-				}
+					content += contentItem;
+				});
+			}
+			else if(codeCoverage.codecoverage) {
+				codeCoverage.codecoverage.sort((item1, item2) => {
+					return item1.name.localeCompare(item2.name);
+				}).forEach((item: CoverageItem2) => {
+					const className : string | null = item.name;
+					const percentage : number = item.percentage ? Number.parseFloat(item.percentage.replace('%','')) : 0;
 
-				let colorClass : string = "";
+					const contentItem : string | null = this.calculateHtmlForItem(className, percentage);
+					if(!contentItem) return;
 
-				if (item.coveredPercent < 60) {
-					colorClass = "bg-danger";
-				} else if (item.coveredPercent < 75) {
-					colorClass = "bg-warning";
-				} else {
-					colorClass = "bg-success";
-				}
-
-				let coverage : string = Math.round(item.coveredPercent).toString();
-
-				content += `
-					<tr>
-						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
-					</tr>`;
-			});
+					content += contentItem;
+				});
+			}
 
 			const fsPromises = fs.promises;
 			const classes = await fsPromises.readdir(apexClassesDirPath);
 			classes.forEach(function (file) {
 				if(!file.endsWith('.cls')) return;
 				const apexClass = file.replace(".cls","");
-				const isTestClass = codeCoverage.tests.find((item) => item.ApexClass.Name == apexClass);
+				const isTestClass = codeCoverage.tests.find((item) => (item.ApexClass && item.ApexClass.Name == apexClass) || (item.apexClass && item.apexClass.name == apexClass));
 				if(isTestClass !== undefined) return;
-				const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+				const found = codeCoverage.coverage ?
+					codeCoverage.coverage.coverage.find((item) => item.name == apexClass) :
+					codeCoverage.codecoverage.find((item) => item.name == apexClass);
 				if(found === undefined) {
 					content += `
 						<tr>
@@ -307,7 +301,9 @@ export class CodeCoveragePanel {
 			triggers.forEach(function (file) {
 				if(!file.endsWith('.trigger')) return;
 				const apexClass = file.replace(".trigger","");
-				const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+				const found = codeCoverage.coverage ?
+					codeCoverage.coverage.coverage.find((item) => item.name == apexClass) :
+					codeCoverage.codecoverage.find((item) => item.name == apexClass);
 				if(found === undefined) {
 					content += `
 						<tr>
@@ -385,6 +381,43 @@ export class CodeCoveragePanel {
             </html>`;
 	}
 
+	private calculateHtmlForItem(className : string | null, percentage : number) : string | null {
+		if(!className) return null;
+
+		if(this._lowCoverageFilter && percentage >= 75) {
+			return null;
+		}
+
+		const apexClassFile = path.join(apexClassesDirPath, `${className}.cls`);
+		const apexTriggerFile = path.join(apexTriggersDirPath, `${className}.trigger`);
+		if(this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
+			return null;
+		}
+
+		if(this._fileNameFilter && !className.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
+			return null;
+		}
+
+		let colorClass : string = "";
+
+		if (percentage < 60) {
+			colorClass = "bg-danger";
+		} else if (percentage < 75) {
+			colorClass = "bg-warning";
+		} else {
+			colorClass = "bg-success";
+		}
+
+		let coverage : string = Math.round(percentage).toString();
+
+		const content = `
+			<tr>
+				<td>${className}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
+			</tr>`;
+
+		return content;
+	}
+
 	public dispose() {
 		CodeCoveragePanel.currentPanel = undefined;
 
@@ -419,26 +452,36 @@ function getCoverageData() :CoverageTestResult | null {
         return null;
     }
 
-    const testResultOutput = fs.readFileSync(testResultFilePath, "utf8");
-    const codeCoverage: CoverageTestResult = JSON.parse(
-        testResultOutput
-	) as CoverageTestResult;
-
-	return codeCoverage;
+	const testResultOutput = fs.readFileSync(testResultFilePath, "utf8");
+		const codeCoverage: CoverageTestResult = JSON.parse(
+			testResultOutput
+		) as CoverageTestResult;
+		return codeCoverage;
 }
 
 function getCoverageForCurrentEditor() :number | null {
     const codeCoverage: CoverageTestResult | null = getCoverageData();
-    if (!codeCoverage || !codeCoverage.coverage) {
+    if (!codeCoverage) {
         return null;
     }
 
-    let coveredPercent: number | null = null;
-    codeCoverage.coverage.coverage.forEach((item: CoverageItem) => {
-        if (window.activeTextEditor?.document.fileName.includes(item.name)) {
-            coveredPercent = item.coveredPercent;
-        }
-    });
+	let coveredPercent: number | null = null;
+
+	if(codeCoverage.coverage) {
+		codeCoverage.coverage.coverage.forEach((item: CoverageItem) => {
+			if (window.activeTextEditor?.document.fileName.includes(item.name)) {
+				coveredPercent = item.coveredPercent;
+			}
+		});
+	}
+	else if(codeCoverage.codecoverage) {
+		codeCoverage.codecoverage.forEach((item: CoverageItem2) => {
+			if (window.activeTextEditor?.document.fileName.includes(item.name)) {
+				coveredPercent = Number.parseFloat(item.percentage.replace('%',''));
+			}
+		});
+	}
+
 
     return coveredPercent;
 }
@@ -448,6 +491,7 @@ type CoverageTestResult = {
         coverage: CoverageItem[];
 	};
 	tests: TestItem[];
+    codecoverage: CoverageItem2[];
 };
 
 type CoverageItem = {
@@ -456,13 +500,26 @@ type CoverageItem = {
     totalLines: number;
     totalCovered: number;
 	coveredPercent: number;
-	isProjectFile: boolean;
+};
+
+type CoverageItem2 = {
+    apexId: string;
+	name: string;
+	type: string;
+    numLinesCovered: number;
+    numLinesUncovered: number;
+	percentage: string;
 };
 
 type TestItem = {
 	ApexClass: ApexClassItem;
+	apexClass: ApexClassItem2;
 }
 
 type ApexClassItem = {
 	Name: string;
+}
+
+type ApexClassItem2 = {
+	name: string;
 }

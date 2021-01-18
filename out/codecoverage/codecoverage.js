@@ -181,46 +181,42 @@ class CodeCoveragePanel {
 					</tr>
 				</thead>
 				<tbody>`;
-                codeCoverage.coverage.coverage.sort((item1, item2) => {
-                    return item1.name.localeCompare(item2.name);
-                }).forEach((item) => {
-                    if (this._lowCoverageFilter && item.coveredPercent >= 75) {
-                        return;
-                    }
-                    const apexClassFile = path.join(apexClassesDirPath, `${item.name}.cls`);
-                    const apexTriggerFile = path.join(apexTriggersDirPath, `${item.name}.trigger`);
-                    if (this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
-                        return;
-                    }
-                    if (this._fileNameFilter && !item.name.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
-                        return;
-                    }
-                    let colorClass = "";
-                    if (item.coveredPercent < 60) {
-                        colorClass = "bg-danger";
-                    }
-                    else if (item.coveredPercent < 75) {
-                        colorClass = "bg-warning";
-                    }
-                    else {
-                        colorClass = "bg-success";
-                    }
-                    let coverage = Math.round(item.coveredPercent).toString();
-                    content += `
-					<tr>
-						<td>${item.name}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
-					</tr>`;
-                });
+                if (codeCoverage.coverage) {
+                    codeCoverage.coverage.coverage.sort((item1, item2) => {
+                        return item1.name.localeCompare(item2.name);
+                    }).forEach((item) => {
+                        const className = item.name;
+                        const percentage = item.coveredPercent;
+                        const contentItem = this.calculateHtmlForItem(className, percentage);
+                        if (!contentItem)
+                            return;
+                        content += contentItem;
+                    });
+                }
+                else if (codeCoverage.codecoverage) {
+                    codeCoverage.codecoverage.sort((item1, item2) => {
+                        return item1.name.localeCompare(item2.name);
+                    }).forEach((item) => {
+                        const className = item.name;
+                        const percentage = item.percentage ? Number.parseFloat(item.percentage.replace('%', '')) : 0;
+                        const contentItem = this.calculateHtmlForItem(className, percentage);
+                        if (!contentItem)
+                            return;
+                        content += contentItem;
+                    });
+                }
                 const fsPromises = fs.promises;
                 const classes = yield fsPromises.readdir(apexClassesDirPath);
                 classes.forEach(function (file) {
                     if (!file.endsWith('.cls'))
                         return;
                     const apexClass = file.replace(".cls", "");
-                    const isTestClass = codeCoverage.tests.find((item) => item.ApexClass.Name == apexClass);
+                    const isTestClass = codeCoverage.tests.find((item) => (item.ApexClass && item.ApexClass.Name == apexClass) || (item.apexClass && item.apexClass.name == apexClass));
                     if (isTestClass !== undefined)
                         return;
-                    const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+                    const found = codeCoverage.coverage ?
+                        codeCoverage.coverage.coverage.find((item) => item.name == apexClass) :
+                        codeCoverage.codecoverage.find((item) => item.name == apexClass);
                     if (found === undefined) {
                         content += `
 						<tr>
@@ -233,7 +229,9 @@ class CodeCoveragePanel {
                     if (!file.endsWith('.trigger'))
                         return;
                     const apexClass = file.replace(".trigger", "");
-                    const found = codeCoverage.coverage.coverage.find((item) => item.name == apexClass);
+                    const found = codeCoverage.coverage ?
+                        codeCoverage.coverage.coverage.find((item) => item.name == apexClass) :
+                        codeCoverage.codecoverage.find((item) => item.name == apexClass);
                     if (found === undefined) {
                         content += `
 						<tr>
@@ -309,6 +307,37 @@ class CodeCoveragePanel {
             </html>`;
         });
     }
+    calculateHtmlForItem(className, percentage) {
+        if (!className)
+            return null;
+        if (this._lowCoverageFilter && percentage >= 75) {
+            return null;
+        }
+        const apexClassFile = path.join(apexClassesDirPath, `${className}.cls`);
+        const apexTriggerFile = path.join(apexTriggersDirPath, `${className}.trigger`);
+        if (this._projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
+            return null;
+        }
+        if (this._fileNameFilter && !className.toLowerCase().includes(this._fileNameFilter.toLowerCase())) {
+            return null;
+        }
+        let colorClass = "";
+        if (percentage < 60) {
+            colorClass = "bg-danger";
+        }
+        else if (percentage < 75) {
+            colorClass = "bg-warning";
+        }
+        else {
+            colorClass = "bg-success";
+        }
+        let coverage = Math.round(percentage).toString();
+        const content = `
+			<tr>
+				<td>${className}</td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
+			</tr>`;
+        return content;
+    }
     dispose() {
         CodeCoveragePanel.currentPanel = undefined;
         // Clean up our resources
@@ -342,16 +371,26 @@ function getCoverageData() {
 }
 function getCoverageForCurrentEditor() {
     const codeCoverage = getCoverageData();
-    if (!codeCoverage || !codeCoverage.coverage) {
+    if (!codeCoverage) {
         return null;
     }
     let coveredPercent = null;
-    codeCoverage.coverage.coverage.forEach((item) => {
-        var _a;
-        if ((_a = vscode_1.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document.fileName.includes(item.name)) {
-            coveredPercent = item.coveredPercent;
-        }
-    });
+    if (codeCoverage.coverage) {
+        codeCoverage.coverage.coverage.forEach((item) => {
+            var _a;
+            if ((_a = vscode_1.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document.fileName.includes(item.name)) {
+                coveredPercent = item.coveredPercent;
+            }
+        });
+    }
+    else if (codeCoverage.codecoverage) {
+        codeCoverage.codecoverage.forEach((item) => {
+            var _a;
+            if ((_a = vscode_1.window.activeTextEditor) === null || _a === void 0 ? void 0 : _a.document.fileName.includes(item.name)) {
+                coveredPercent = Number.parseFloat(item.percentage.replace('%', ''));
+            }
+        });
+    }
     return coveredPercent;
 }
 //# sourceMappingURL=codecoverage.js.map
