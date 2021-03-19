@@ -1,1 +1,2 @@
-export { CodeCoverage, CodeCoveragePanel } from './codecoverage';
+export { CodeCoverage } from './codeCoverage';
+export { CodeCoveragePanel } from './codeCoverageViewPanel';

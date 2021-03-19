@@ -33,7 +33,8 @@
 	"activationEvents": [
 		"onLanguage:apex",
 		"onCommand:apex-code-coverage-visualizer.show-code-coverage",
-		"onWebviewPanel:codeCoverage"
+		"onWebviewPanel:codeCoverage",
+		"workspaceContains:sfdx-project.json"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -67,7 +68,7 @@
 		},
 		"keybindings": [
 			{
-				"command": "markdown.showPreview",
+				"command": "apex-code-coverage-visualizer.refresh-code-coverage",
 				"key": "f5",
 				"when": "codeCoverageViewFocused"
 			}
@@ -82,16 +83,16 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.46.0",
 		"@types/glob": "^7.1.1",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.11.0",
-		"eslint": "^6.8.0",
-		"@typescript-eslint/parser": "^2.30.0",
-		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@types/vscode": "^1.50.0",
+		"@typescript-eslint/eslint-plugin": "^4.16.0",
+		"@typescript-eslint/parser": "^4.16.0",
+		"eslint": "^7.21.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",
-		"typescript": "^3.8.3",
+		"typescript": "^4.2.2",
 		"vscode-test": "^1.3.0"
 	},
 	"extensionDependencies": [

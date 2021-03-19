@@ -17,13 +17,12 @@ const codecoverage_1 = require("./codecoverage");
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 function activate(context) {
+    const codeCoverage = new codecoverage_1.CodeCoverage();
     context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.show-code-coverage', () => {
         codecoverage_1.CodeCoveragePanel.createOrShow(context.extensionPath);
     }));
     context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.refresh-code-coverage', () => {
-        if (codecoverage_1.CodeCoveragePanel.currentPanel) {
-            codecoverage_1.CodeCoveragePanel.currentPanel.setHtmlForWebview();
-        }
+        codeCoverage.refresh();
     }));
     if (vscode.window.registerWebviewPanelSerializer) {
         // Make sure we register a serializer in activation event
@@ -35,7 +34,6 @@ function activate(context) {
             }
         });
     }
-    const codeCoverage = new codecoverage_1.CodeCoverage();
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated

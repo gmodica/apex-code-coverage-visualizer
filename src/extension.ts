@@ -6,6 +6,8 @@ import { CodeCoverage, CodeCoveragePanel } from './codecoverage';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	const codeCoverage = new CodeCoverage();
+
 	context.subscriptions.push(
 		vscode.commands.registerCommand('apex-code-coverage-visualizer.show-code-coverage', () => {
 			CodeCoveragePanel.createOrShow(context.extensionPath);
@@ -14,9 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('apex-code-coverage-visualizer.refresh-code-coverage', () => {
-			if(CodeCoveragePanel.currentPanel) {
-				CodeCoveragePanel.currentPanel.setHtmlForWebview();
-			}
+			codeCoverage.refresh();
 		})
 	);
 
@@ -28,8 +28,6 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		});
 	}
-
-	const codeCoverage = new CodeCoverage();
 }
 
 // this method is called when your extension is deactivated
