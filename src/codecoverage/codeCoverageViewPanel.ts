@@ -1,7 +1,6 @@
-import * as fs from "fs";
 import * as path from "path";
 import * as vscode from 'vscode';
-import { CoverageTestResult, CoverageItem, CoverageItem2 } from './types';
+import { CoverageTestResult } from './types';
 import { CodeCoverage } from './codeCoverage';
 import { CodeCoverageHtml } from './codeCoverageHtml';
 
@@ -93,6 +92,7 @@ export class CodeCoveragePanel {
 		);
 
 		CodeCoveragePanel.currentPanel = new CodeCoveragePanel(panel, extensionPath);
+		CodeCoveragePanel.currentPanel.setHtmlForWebview(null);
 	}
 
 	public static revive(panel: vscode.WebviewPanel, extensionPath: string) {
