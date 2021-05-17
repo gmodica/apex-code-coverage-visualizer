@@ -8,7 +8,7 @@ This extension shows a summary of the code coverage for all APEX classes in the 
 
 It works with both Dark and Light themes
 
-![Apex Code Coverage](images/code-coverage-light.gif)
+![Apex Code Coverage](images/code-coverage-dark.gif)
 
 ## Documentation
 
@@ -45,9 +45,30 @@ It is possible to filter down the test results to show only tests that are below
 
 ![Filter](images/coverage-filter.png)
 
+It is possible that the tests you write might contrigute to the coverage of other classes that are not in your project, by default the coverage viewer shows only classes that are present on the current project, but you can disable this and show all other classes as well.
+
+#### Coverage Side Panel
+
+The coverage side panel shows by default on the Test view, but it is possible to move it to any other place inside the Visual Studio Code layout:
+
+![Coverage Sidebar](images/coverage-sidebar.gif)
+
+The sidebar also allows to filter down the classes by clicking on the commands on the title bar:
+
+![Coverage Sidebar](images/sidebar.png)
+
+#### Test Coverage Contribution
+
+It is possible to know what test classes and methods are contributing to the overall coverage percentage of a class by expanding the chevron icon on the right of the class:
+
+![Coverage Sidebar](images/testContribution.png)
+
 ## Bugs and Feedback
 
 To report issues with Salesforce Extensions for VS Code, open a [bug on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Bug_report.md). If you would like to suggest a feature, create a [feature request on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Feature_request.md).
+
+## Thanks
+Thanks to Kevin Poorman ([@codefriar](https://www.twitter.com/codefriar)) for its contribution to the idea of showing the test coverage in a sidebar panel for easier reference. Kevin and I did this enhancement on an episode of Salesforce Developer Code Live, which you can find [here](https://youtu.be/xdL9nY2W8Fw).
 
 
 ## License

@@ -139,7 +139,7 @@ export class CodeCoveragePanel {
 				</form>
 			</div>`;
 
-			content += await CodeCoverageHtml.getHtmlForCoverage(codeCoverage, this._lowCoverageFilter, this._projectFilesOnlyFilter, this._fileNameFilter);
+			content += await CodeCoverageHtml.getHtmlForCoverage(codeCoverage, false, this._lowCoverageFilter, this._projectFilesOnlyFilter, this._fileNameFilter);
 		}
 
 		return `<!DOCTYPE html>
@@ -149,11 +149,18 @@ export class CodeCoveragePanel {
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
 	<title>Code Coverage</title>
 	<style>
 		body {
 			color: var(--vscode-editor-foreground);
 			background-color: var(--vscode-editor-background);
+		}
+		.collapsible {
+			visibility: collapse;
+		}
+		i {
+			cursor: pointer;
 		}
 	</style>
 </head>
@@ -200,6 +207,18 @@ export class CodeCoveragePanel {
 				command: 'filterapex',
 				filter: text.value
 			});
+		}
+
+		function showInfo(element) {
+			let collapsibleElement = document.getElementById(element.parentElement.parentElement.id + '--test');
+			if(collapsibleElement.style.visibility == 'visible') {
+				collapsibleElement.style.visibility = 'collapse';
+				element.className = 'fas fa-chevron-circle-down';
+			}
+			else {
+				collapsibleElement.style.visibility = 'visible';
+				element.className = 'fas fa-chevron-circle-up';
+			}
 		}
 	</script>
 </body>

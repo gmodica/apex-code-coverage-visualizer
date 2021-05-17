@@ -24,6 +24,22 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.refresh-code-coverage', () => {
         codeCoverage.refresh();
     }));
+    context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.filter-classes-project', () => {
+        var _a;
+        (_a = codecoverage_1.CodeCoverageSideViewPanelProvider.currentView) === null || _a === void 0 ? void 0 : _a.toggleProjectFilesOnlyFilter();
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.filter-classes-all', () => {
+        var _a;
+        (_a = codecoverage_1.CodeCoverageSideViewPanelProvider.currentView) === null || _a === void 0 ? void 0 : _a.toggleProjectFilesOnlyFilter();
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.filter-coverage-warning', () => {
+        var _a;
+        (_a = codecoverage_1.CodeCoverageSideViewPanelProvider.currentView) === null || _a === void 0 ? void 0 : _a.toggleLowCoverageFilter();
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('apex-code-coverage-visualizer.filter-coverage-all', () => {
+        var _a;
+        (_a = codecoverage_1.CodeCoverageSideViewPanelProvider.currentView) === null || _a === void 0 ? void 0 : _a.toggleLowCoverageFilter();
+    }));
     if (vscode.window.registerWebviewPanelSerializer) {
         // Make sure we register a serializer in activation event
         vscode.window.registerWebviewPanelSerializer(codecoverage_1.CodeCoveragePanel.viewType, {
@@ -34,6 +50,7 @@ function activate(context) {
             }
         });
     }
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(codecoverage_1.CodeCoverageSideViewPanelProvider.viewType, new codecoverage_1.CodeCoverageSideViewPanelProvider(context.extensionUri)));
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated

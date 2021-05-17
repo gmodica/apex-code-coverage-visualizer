@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.9.5]
+
+- Added test panel on sidebar
+- Added collapsible section showing test coverage contribution
+
 ## [0.9.4]
 
 - Fixed issues with new format of tests results in SFDX

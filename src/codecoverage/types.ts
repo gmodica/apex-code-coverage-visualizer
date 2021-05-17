@@ -26,6 +26,7 @@ export type CoverageItem2 = {
 export type TestItem = {
 	ApexClass: ApexClassItem;
 	apexClass: ApexClassItem2;
+	perClassCoverage: ClassCoverageItem[];
 };
 
 export type ApexClassItem = {
@@ -34,4 +35,10 @@ export type ApexClassItem = {
 
 export type ApexClassItem2 = {
 	name: string;
+};
+
+export type ClassCoverageItem = {
+	apexClassOrTriggerName: string;
+	apexTestMethodName: string;
+	percentage: string;
 };

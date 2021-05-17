@@ -15,10 +15,10 @@
 		"color": "#ECECEC",
 		"theme": "light"
 	},
-	"version": "0.9.4",
+	"version": "0.9.5",
 	"publisher": "modicatech",
 	"engines": {
-		"vscode": "^1.46.0"
+		"vscode": "^1.50.0"
 	},
 	"keywords": [
 		"apex",
@@ -49,6 +49,30 @@
 				"title": "Refresh Code Coverage",
 				"category": "SFDX",
 				"icon": "$(refresh)"
+			},
+			{
+				"command": "apex-code-coverage-visualizer.filter-classes-project",
+				"title": "Show only classes in project",
+				"category": "SFDX",
+				"icon": "$(list-filter)"
+			},
+			{
+				"command": "apex-code-coverage-visualizer.filter-classes-all",
+				"title": "Show all classes in test results",
+				"category": "SFDX",
+				"icon": "$(list-flat)"
+			},
+			{
+				"command": "apex-code-coverage-visualizer.filter-coverage-warning",
+				"title": "Show only classes with coverage lower than 75%",
+				"category": "SFDX",
+				"icon": "$(warning)"
+			},
+			{
+				"command": "apex-code-coverage-visualizer.filter-coverage-all",
+				"title": "Show all classes",
+				"category": "SFDX",
+				"icon": "$(circle-large-filled)"
 			}
 		],
 		"menus": {
@@ -59,10 +83,49 @@
 					"when": "codeCoverageViewFocused"
 				}
 			],
+			"view/title": [
+				{
+					"command": "apex-code-coverage-visualizer.filter-classes-project",
+					"group": "navigation@1",
+					"when": "view == apex-code-coverage-visualizer.test-view && filterClassesAll"
+				},
+				{
+					"command": "apex-code-coverage-visualizer.filter-coverage-warning",
+					"group": "navigation@2",
+					"when": "view == apex-code-coverage-visualizer.test-view && filterCoverageAll"
+				},
+				{
+					"command": "apex-code-coverage-visualizer.filter-classes-all",
+					"group": "navigation@1",
+					"when": "view == apex-code-coverage-visualizer.test-view && filterClassesProject"
+				},
+				{
+					"command": "apex-code-coverage-visualizer.filter-coverage-all",
+					"group": "navigation@2",
+					"when": "view == apex-code-coverage-visualizer.test-view && filterCoverageWarning"
+				},
+				{
+					"command": "apex-code-coverage-visualizer.refresh-code-coverage",
+					"group": "navigation",
+					"when": "view == apex-code-coverage-visualizer.test-view"
+				}
+			],
 			"commandPalette": [
 				{
 					"command": "apex-code-coverage-visualizer.refresh-code-coverage",
 					"when": "codeCoverageViewFocused"
+				}
+			]
+		},
+		"views": {
+			"test": [
+				{
+					"type": "webview",
+					"id": "apex-code-coverage-visualizer.test-view",
+					"name": "Apex Tests Coverage",
+					"icon": "$(test-view-icon)",
+					"when": "sfdx:project_opened",
+					"contextualTitle": "Apex Tests Coverage"
 				}
 			]
 		},

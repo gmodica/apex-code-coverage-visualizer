@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CodeCoverageSideViewPanelProvider = void 0;
+const vscode = require("vscode");
 const codeCoverage_1 = require("./codeCoverage");
 const codeCoverageHtml_1 = require("./codeCoverageHtml");
 class CodeCoverageSideViewPanelProvider {
@@ -22,10 +23,12 @@ class CodeCoverageSideViewPanelProvider {
     }
     toggleLowCoverageFilter() {
         this._lowCoverageFilter = !this._lowCoverageFilter;
+        this.setContextVariables();
         this.updateHtmlForWebView();
     }
     toggleProjectFilesOnlyFilter() {
         this._projectFilesOnlyFilter = !this._projectFilesOnlyFilter;
+        this.setContextVariables();
         this.updateHtmlForWebView();
     }
     resolveWebviewView(webviewView, context, _token) {
@@ -37,10 +40,17 @@ class CodeCoverageSideViewPanelProvider {
                 this._extensionUri
             ]
         };
+        this.setContextVariables();
         this.setHtmlForWebview(null);
         webviewView.webview.onDidReceiveMessage(message => {
         });
         CodeCoverageSideViewPanelProvider.currentView = this;
+    }
+    setContextVariables() {
+        vscode.commands.executeCommand('setContext', 'filterClassesProject', !this._projectFilesOnlyFilter);
+        vscode.commands.executeCommand('setContext', 'filterClassesAll', this._projectFilesOnlyFilter);
+        vscode.commands.executeCommand('setContext', 'filterCoverageWarning', this._lowCoverageFilter);
+        vscode.commands.executeCommand('setContext', 'filterCoverageAll', !this._lowCoverageFilter);
     }
     setHtmlForWebview(codeCoverage) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -65,7 +75,7 @@ class CodeCoverageSideViewPanelProvider {
         return __awaiter(this, void 0, void 0, function* () {
             let content = '';
             if (!codeCoverage) {
-                content = '<h2>No test coverage data exists. Please run tests to generate test coverage data</h2>';
+                content = '<p>No test coverage data exists. Please run tests to generate test coverage data</p>';
             }
             else {
                 content = yield codeCoverageHtml_1.CodeCoverageHtml.getHtmlForCoverage(codeCoverage, true, this._lowCoverageFilter, this._projectFilesOnlyFilter, this._fileNameFilter);
@@ -81,7 +91,7 @@ class CodeCoverageSideViewPanelProvider {
 	<style>
 		body {
 			color: var(--vscode-editor-foreground);
-			background-color: var(--vscode-editor-background);
+			background-color: var(--vscode-sidebar-background);
 		}
 		.apexClassName {
 			font-size: 9pt;

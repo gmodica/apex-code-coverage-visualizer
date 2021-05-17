@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { CoverageTestResult, CoverageItem, CoverageItem2 } from './types';
+import { CoverageTestResult, CoverageItem, CoverageItem2, ClassCoverageItem } from './types';
 import { CodeCoveragePanel } from './codeCoverageViewPanel';
+import { CodeCoverageSideViewPanelProvider } from './codeCoverageSideViewPanel';
 
 export const apexDirPath = path.join(
     vscode.workspace!.workspaceFolders![0].uri.fsPath,
@@ -57,10 +58,36 @@ export class CodeCoverage implements vscode.Disposable {
 		return getCoverageData();
 	}
 
+	public static getTestClassesForApexClass(apexClass : string, codeCoverage : CoverageTestResult | null) : ClassCoverageItem[] | null {
+		if(codeCoverage === null) {
+			codeCoverage = this.getCoverage();
+		}
+
+		let tests : ClassCoverageItem[] = [];
+
+		codeCoverage?.tests?.forEach(test => {
+			test.perClassCoverage.forEach(coverage => {
+				if(coverage.apexClassOrTriggerName === apexClass) {
+					let testCoverage : ClassCoverageItem = {
+						apexClassOrTriggerName: test.apexClass.name,
+						apexTestMethodName: coverage.apexTestMethodName,
+						percentage: coverage.percentage
+					};
+					tests.push(testCoverage);
+				}
+			});
+		});
+
+		return tests;
+	}
+
 	public refresh() {
 		this._codeCoverage = getCoverageData();
 		if(CodeCoveragePanel.currentPanel) {
 			CodeCoveragePanel.currentPanel.setHtmlForWebview(this._codeCoverage);
+		}
+		if(CodeCoverageSideViewPanelProvider.currentView) {
+			CodeCoverageSideViewPanelProvider.currentView.setHtmlForWebview(this._codeCoverage);
 		}
 	}
 

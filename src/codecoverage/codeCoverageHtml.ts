@@ -1,20 +1,21 @@
 import * as fs from "fs";
 import * as path from "path";
 import { CoverageTestResult, CoverageItem, CoverageItem2 } from './types';
-import { apexClassesDirPath, apexTriggersDirPath } from './codeCoverage';
+import { CodeCoverage, apexClassesDirPath, apexTriggersDirPath } from './codeCoverage';
 
 export class CodeCoverageHtml {
-	public static async getHtmlForCoverage(codeCoverage: CoverageTestResult | null, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : Promise<string> {
+	public static async getHtmlForCoverage(codeCoverage: CoverageTestResult | null, isSmall: boolean, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : Promise<string> {
 		if(!codeCoverage) {
 			return '';
 		}
 
 		let content : string =`
-		<table class="table table-striped">
+		<table class="${!isSmall?"table table-striped":""}">
 			<thead>
 				<tr>
 					<th style="width: 40%">Apex Class</th>
 					<th style="width: 60%">Coverage</th>
+					${!isSmall ? '<th>&nbsp;</th>' : ''}
 				</tr>
 			</thead>
 			<tbody>`;
@@ -26,7 +27,7 @@ export class CodeCoverageHtml {
 				const className : string | null = item.name;
 				const percentage : number = item.coveredPercent;
 
-				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
+				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
 				if(!contentItem) {
 					return;
 				}
@@ -41,7 +42,7 @@ export class CodeCoverageHtml {
 				const className : string | null = item.name;
 				const percentage : number = item.percentage ? Number.parseFloat(item.percentage.replace('%','')) : 0;
 
-				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
+				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
 				if(!contentItem) {
 					return;
 				}
@@ -72,8 +73,14 @@ export class CodeCoverageHtml {
 			if(found === undefined) {
 				content += `
 					<tr>
-						<td><span class="apexClassName">${apexClass}</span></td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
+						<td><span class="apexClassName">${apexClass}</span></td>
+						<td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
+						${!isSmall ? '<td>&nbsp;</td>':''}
 					</tr>`;
+				if(!isSmall) {
+					content += `
+					<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
+				}
 			}
 		});
 		const triggers = await fsPromises.readdir(apexTriggersDirPath);
@@ -91,8 +98,14 @@ export class CodeCoverageHtml {
 			if(found === undefined) {
 				content += `
 					<tr>
-						<td><span class="apexClassName">${apexClass}</span></td><td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
+						<td><span class="apexClassName">${apexClass}</span></td>
+						<td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
+						${!isSmall ? '<td>&nbsp;</td>':''}
 					</tr>`;
+				if(!isSmall) {
+					content += `
+					<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
+				}
 			}
 		});
 
@@ -103,7 +116,7 @@ export class CodeCoverageHtml {
 		return content;
 	}
 
-	private static calculateHtmlForItem(className : string | null, percentage : number, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : string | null {
+	private static calculateHtmlForItem(codeCoverage: CoverageTestResult | null, isSmall: boolean, className : string | null, percentage : number, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : string | null {
 		if(!className) {
 			return null;
 		}
@@ -134,10 +147,35 @@ export class CodeCoverageHtml {
 
 		let coverage : string = Math.round(percentage).toString();
 
-		const content = `
-			<tr>
-				<td><span class="apexClassName">${className}</span></td><td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
+		let testClasses = CodeCoverage.getTestClassesForApexClass(className, codeCoverage);
+		const hasTestInfo = testClasses !== null && testClasses.length > 0;
+
+		let content = `
+			<tr id="${className}">
+				<td><span class="apexClassName">${className}</span></td>
+				<td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
+				${!isSmall && hasTestInfo ? '<td><i class="fas fa-chevron-circle-down" title="Show test class coverage contribution" onclick="showInfo(this)"></i></td>' : ""}</td>
+				${!isSmall && !hasTestInfo ? '<td>&nbsp;</td>' : ''}
 			</tr>`;
+
+		if(!isSmall) {
+			if(hasTestInfo) {
+				let testInfo = '';
+				testClasses?.forEach(test => {
+					testInfo += `${test.apexClassOrTriggerName}.${test.apexTestMethodName}: ${test.percentage}<br />`;
+				});
+				content += `
+				<tr id="${className}--test" class="collapsible">
+					<td>&nbsp;</td>
+					<td>${testInfo}</td>
+					<td>&nbsp;</td>
+				</tr>`;
+			}
+			else {
+				content += `
+				<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
+			}
+		}
 
 		return content;
 	}

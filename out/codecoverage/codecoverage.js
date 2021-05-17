@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
 const codeCoverageViewPanel_1 = require("./codeCoverageViewPanel");
+const codeCoverageSideViewPanel_1 = require("./codeCoverageSideViewPanel");
 exports.apexDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, ".sfdx", "tools", "testresults", "apex");
 exports.apexClassesDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "classes");
 exports.apexTriggersDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "triggers");
@@ -25,10 +26,33 @@ class CodeCoverage {
     static getCoverage() {
         return getCoverageData();
     }
+    static getTestClassesForApexClass(apexClass, codeCoverage) {
+        var _a;
+        if (codeCoverage === null) {
+            codeCoverage = this.getCoverage();
+        }
+        let tests = [];
+        (_a = codeCoverage === null || codeCoverage === void 0 ? void 0 : codeCoverage.tests) === null || _a === void 0 ? void 0 : _a.forEach(test => {
+            test.perClassCoverage.forEach(coverage => {
+                if (coverage.apexClassOrTriggerName === apexClass) {
+                    let testCoverage = {
+                        apexClassOrTriggerName: test.apexClass.name,
+                        apexTestMethodName: coverage.apexTestMethodName,
+                        percentage: coverage.percentage
+                    };
+                    tests.push(testCoverage);
+                }
+            });
+        });
+        return tests;
+    }
     refresh() {
         this._codeCoverage = getCoverageData();
         if (codeCoverageViewPanel_1.CodeCoveragePanel.currentPanel) {
             codeCoverageViewPanel_1.CodeCoveragePanel.currentPanel.setHtmlForWebview(this._codeCoverage);
+        }
+        if (codeCoverageSideViewPanel_1.CodeCoverageSideViewPanelProvider.currentView) {
+            codeCoverageSideViewPanel_1.CodeCoverageSideViewPanelProvider.currentView.setHtmlForWebview(this._codeCoverage);
         }
     }
     onDidChangeActiveTextEditor(editor) {
