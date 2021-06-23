@@ -66,6 +66,7 @@ export class CodeCoverage implements vscode.Disposable {
 		let tests : ClassCoverageItem[] = [];
 
 		codeCoverage?.tests?.forEach(test => {
+			if(!test.perClassCoverage) return;
 			test.perClassCoverage.forEach(coverage => {
 				if(coverage.apexClassOrTriggerName === apexClass) {
 					let testCoverage : ClassCoverageItem = {

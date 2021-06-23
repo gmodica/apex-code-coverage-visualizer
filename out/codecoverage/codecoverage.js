@@ -33,6 +33,8 @@ class CodeCoverage {
         }
         let tests = [];
         (_a = codeCoverage === null || codeCoverage === void 0 ? void 0 : codeCoverage.tests) === null || _a === void 0 ? void 0 : _a.forEach(test => {
+            if (!test.perClassCoverage)
+                return;
             test.perClassCoverage.forEach(coverage => {
                 if (coverage.apexClassOrTriggerName === apexClass) {
                     let testCoverage = {

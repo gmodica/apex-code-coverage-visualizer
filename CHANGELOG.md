@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.6]
+
+- Fixed issue with showing coverage contribution under certain conditions
+
 ## [0.9.5]
 
 - Added test panel on sidebar

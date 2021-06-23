@@ -63,6 +63,10 @@ It is possible to know what test classes and methods are contributing to the ove
 
 ![Coverage Sidebar](images/testContribution.png)
 
+## Known Issues
+
+This extension depends on the code coverage information retrieved from SFDX using the standard SFDX extensions for code. This extension cannot show coverage for classes if the coverage for those classes is not retrieved. For big projects, with lots of classes and tests, the SFDX extension sometimes does not retrieve all code coverage for all the classes, so it is possible that you will only see coverage for certain classes while other classes will show no coverage. This is not an issue of this extension, but rather something related with the retrieval of the coverage by the SFDX standard extension.
+
 ## Bugs and Feedback
 
 To report issues with Salesforce Extensions for VS Code, open a [bug on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Bug_report.md). If you would like to suggest a feature, create a [feature request on GitHub](https://github.com/gmodica/apex-code-coverage-visualizer/issues/new?template=Feature_request.md).
