@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.7]
+
+- Shows tests under any other project directory or subdirectory
+
 ## [0.9.6]
 
 - Fixed issue with showing coverage contribution under certain conditions

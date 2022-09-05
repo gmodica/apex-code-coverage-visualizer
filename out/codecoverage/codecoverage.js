@@ -1,14 +1,50 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CodeCoverage = exports.apexTriggersDirPath = exports.apexClassesDirPath = exports.apexDirPath = void 0;
+exports.CodeCoverage = exports.getAllFiles = exports.apexClassesDirPath = exports.apexDirPath = void 0;
 const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
 const codeCoverageViewPanel_1 = require("./codeCoverageViewPanel");
 const codeCoverageSideViewPanel_1 = require("./codeCoverageSideViewPanel");
 exports.apexDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, ".sfdx", "tools", "testresults", "apex");
-exports.apexClassesDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "classes");
-exports.apexTriggersDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "force-app", "main", "default", "triggers");
+exports.apexClassesDirPath = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, "force-app");
+const fsPromises = fs.promises;
+const getAllFiles = function (dirPath, fileTypes) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let arrayOfFiles = [];
+        const files = yield fsPromises.readdir(dirPath);
+        for (const file of files) {
+            if (fs.statSync(path.join(dirPath, file)).isDirectory()) {
+                arrayOfFiles = arrayOfFiles.concat(yield exports.getAllFiles(path.join(dirPath, file), fileTypes));
+            }
+            else {
+                if (fileTypes && fileTypes.length > 0) {
+                    for (const fileType of fileTypes) {
+                        if (file.endsWith(fileType)) {
+                            arrayOfFiles.push(path.join(dirPath, file));
+                            break;
+                        }
+                    }
+                }
+                else {
+                    arrayOfFiles.push(path.join(dirPath, file));
+                }
+            }
+        }
+        ;
+        return arrayOfFiles;
+    });
+};
+exports.getAllFiles = getAllFiles;
 class CodeCoverage {
     constructor() {
         this._codeCoverage = null;
@@ -33,8 +69,9 @@ class CodeCoverage {
         }
         let tests = [];
         (_a = codeCoverage === null || codeCoverage === void 0 ? void 0 : codeCoverage.tests) === null || _a === void 0 ? void 0 : _a.forEach(test => {
-            if (!test.perClassCoverage)
+            if (!test.perClassCoverage) {
                 return;
+            }
             test.perClassCoverage.forEach(coverage => {
                 if (coverage.apexClassOrTriggerName === apexClass) {
                     let testCoverage = {

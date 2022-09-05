@@ -15,19 +15,36 @@ export const apexDirPath = path.join(
 
 export const apexClassesDirPath = path.join(
 	vscode.workspace!.workspaceFolders![0].uri.fsPath,
-	"force-app",
-	"main",
-	"default",
-	"classes"
+	"force-app"
 );
 
-export const apexTriggersDirPath = path.join(
-	vscode.workspace!.workspaceFolders![0].uri.fsPath,
-	"force-app",
-	"main",
-	"default",
-	"triggers"
-);
+const fsPromises = fs.promises;
+
+export const getAllFiles = async function(dirPath : string, fileTypes : string[] | null | undefined) {
+
+	let arrayOfFiles : string[] = [];
+
+	const files = await fsPromises.readdir(dirPath);
+	for(const file of files) {
+		if (fs.statSync(path.join(dirPath,file)).isDirectory()) {
+			arrayOfFiles = arrayOfFiles.concat(await getAllFiles(path.join(dirPath,file), fileTypes));
+		} else {
+			if(fileTypes && fileTypes.length > 0) {
+				for(const fileType of fileTypes) {
+					if(file.endsWith(fileType)) {
+						arrayOfFiles.push(path.join(dirPath, file));
+						break;
+					}
+				}
+			}
+			else {
+				arrayOfFiles.push(path.join(dirPath, file));
+			}
+		}
+	};
+
+	return arrayOfFiles;
+};
 
 export class CodeCoverage implements vscode.Disposable {
 	private _codeCoverage: CoverageTestResult | null = null;
@@ -38,9 +55,7 @@ export class CodeCoverage implements vscode.Disposable {
 		this.statusBarItem.command = 'apex-code-coverage-visualizer.show-code-coverage';
 
         const testResultOutput = path.join(apexDirPath, "*.json");
-        const testResultFileWatcher = vscode.workspace.createFileSystemWatcher(
-            testResultOutput
-        );
+        const testResultFileWatcher = vscode.workspace.createFileSystemWatcher(testResultOutput);
         testResultFileWatcher.onDidCreate((uri) => {
 				this.refresh();
 				this.onDidChangeActiveTextEditor(vscode.window.activeTextEditor);
@@ -66,7 +81,7 @@ export class CodeCoverage implements vscode.Disposable {
 		let tests : ClassCoverageItem[] = [];
 
 		codeCoverage?.tests?.forEach(test => {
-			if(!test.perClassCoverage) return;
+			if(!test.perClassCoverage) { return; }
 			test.perClassCoverage.forEach(coverage => {
 				if(coverage.apexClassOrTriggerName === apexClass) {
 					let testCoverage : ClassCoverageItem = {
@@ -149,10 +164,9 @@ function getCoverageData() :CoverageTestResult | null {
     }
 
 	const testResultOutput = fs.readFileSync(testResultFilePath, "utf8");
-		const codeCoverage: CoverageTestResult = JSON.parse(
-			testResultOutput
-		) as CoverageTestResult;
-		return codeCoverage;
+	const codeCoverage: CoverageTestResult = JSON.parse(testResultOutput) as CoverageTestResult;
+
+	return codeCoverage;
 }
 
 function getCoverageForCurrentEditor(codeCoverage: CoverageTestResult | null) :number | null {

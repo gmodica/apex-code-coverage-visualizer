@@ -157,10 +157,13 @@ export class CodeCoveragePanel {
 			background-color: var(--vscode-editor-background);
 		}
 		.collapsible {
-			visibility: collapse;
+			display: none;
 		}
 		i {
 			cursor: pointer;
+		}
+		small {
+			font-size: 8pt;
 		}
 	</style>
 </head>
@@ -210,13 +213,14 @@ export class CodeCoveragePanel {
 		}
 
 		function showInfo(element) {
-			let collapsibleElement = document.getElementById(element.parentElement.parentElement.id + '--test');
-			if(collapsibleElement.style.visibility == 'visible') {
-				collapsibleElement.style.visibility = 'collapse';
+			let id = element.parentElement.parentElement.id + '--test';
+			let collapsibleElement = document.getElementById(id);
+			if(collapsibleElement.style.display == 'block') {
+				collapsibleElement.style.display = 'none';
 				element.className = 'fas fa-chevron-circle-down';
 			}
 			else {
-				collapsibleElement.style.visibility = 'visible';
+				collapsibleElement.style.display = 'block';
 				element.className = 'fas fa-chevron-circle-up';
 			}
 		}

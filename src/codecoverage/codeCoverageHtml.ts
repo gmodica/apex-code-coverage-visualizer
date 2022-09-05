@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { CoverageTestResult, CoverageItem, CoverageItem2 } from './types';
-import { CodeCoverage, apexClassesDirPath, apexTriggersDirPath } from './codeCoverage';
+import { CodeCoverage, apexClassesDirPath, getAllFiles } from './codeCoverage';
 
 export class CodeCoverageHtml {
 	public static async getHtmlForCoverage(codeCoverage: CoverageTestResult | null, isSmall: boolean, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : Promise<string> {
@@ -15,10 +15,11 @@ export class CodeCoverageHtml {
 				<tr>
 					<th style="width: 40%">Apex Class</th>
 					<th style="width: 60%">Coverage</th>
-					${!isSmall ? '<th>&nbsp;</th>' : ''}
 				</tr>
 			</thead>
 			<tbody>`;
+
+		const files = await getAllFiles(apexClassesDirPath, [".cls",".trigger"]);
 
 		if(codeCoverage.coverage) {
 			codeCoverage.coverage.coverage.sort((item1, item2) => {
@@ -27,7 +28,7 @@ export class CodeCoverageHtml {
 				const className : string | null = item.name;
 				const percentage : number = item.coveredPercent;
 
-				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
+				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, files, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
 				if(!contentItem) {
 					return;
 				}
@@ -42,7 +43,7 @@ export class CodeCoverageHtml {
 				const className : string | null = item.name;
 				const percentage : number = item.percentage ? Number.parseFloat(item.percentage.replace('%','')) : 0;
 
-				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
+				const contentItem : string | null = CodeCoverageHtml.calculateHtmlForItem(codeCoverage, isSmall, files, className, percentage, lowCoverageFilter, projectFilesOnlyFilter, fileNameFilter);
 				if(!contentItem) {
 					return;
 				}
@@ -53,16 +54,15 @@ export class CodeCoverageHtml {
 
 		// calculate those that do not have any coverage
 
-		const fsPromises = fs.promises;
-		const classes = await fsPromises.readdir(apexClassesDirPath);
-		classes.forEach(function (file) {
+		files.forEach(function (file : string) {
 			if(!file.endsWith('.cls')) {
 				return;
 			}
 			if(fileNameFilter && !file.toLowerCase().includes(fileNameFilter.toLowerCase())) {
 				return;
 			}
-			const apexClass = file.replace(".cls","");
+			const apexClass = path.basename(file,".cls");
+			const directory = path.dirname(file).replace(apexClassesDirPath, '');
 			const isTestClass = codeCoverage.tests.find((item) => (item.ApexClass && item.ApexClass.Name === apexClass) || (item.apexClass && item.apexClass.name === apexClass));
 			if(isTestClass !== undefined) {
 				return;
@@ -73,39 +73,34 @@ export class CodeCoverageHtml {
 			if(found === undefined) {
 				content += `
 					<tr>
-						<td><span class="apexClassName">${apexClass}</span></td>
+						<td><span class="apexClassName" title="${apexClass}">${apexClass}
+						${!isSmall ? '<br /><small title="' + directory + '">' + directory + '</small>' : ''}
+						</span></td>
 						<td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
-						${!isSmall ? '<td>&nbsp;</td>':''}
 					</tr>`;
-				if(!isSmall) {
-					content += `
-					<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
-				}
 			}
 		});
-		const triggers = await fsPromises.readdir(apexTriggersDirPath);
-		triggers.forEach(function (file) {
+
+		files.forEach(function (file : string) {
 			if(!file.endsWith('.trigger')) {
 				return;
 			}
 			if(fileNameFilter && !file.toLowerCase().includes(fileNameFilter.toLowerCase())) {
 				return;
 			}
-			const apexClass = file.replace(".trigger","");
+			const apexClass = path.basename(file,".trigger");
+			const directory = path.dirname(file).replace(apexClassesDirPath, '');
 			const found = codeCoverage.coverage ?
 				codeCoverage.coverage.coverage.find((item) => item.name === apexClass) :
 				codeCoverage.codecoverage.find((item) => item.name === apexClass);
 			if(found === undefined) {
 				content += `
 					<tr>
-						<td><span class="apexClassName">${apexClass}</span></td>
+						<td><span class="apexClassName" title="${apexClass}">${apexClass}
+						${!isSmall ? '<br /><small title="' + directory + '">' + directory + '</small>' : ''}
+						</span></td>
 						<td><div class="progress"><div class="progress-bar bg-danger" role="progressbar" style="width: 100%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">No coverage</div></div></td>
-						${!isSmall ? '<td>&nbsp;</td>':''}
 					</tr>`;
-				if(!isSmall) {
-					content += `
-					<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
-				}
 			}
 		});
 
@@ -116,7 +111,7 @@ export class CodeCoverageHtml {
 		return content;
 	}
 
-	private static calculateHtmlForItem(codeCoverage: CoverageTestResult | null, isSmall: boolean, className : string | null, percentage : number, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : string | null {
+	private static calculateHtmlForItem(codeCoverage: CoverageTestResult | null, isSmall: boolean, files: string[] | null, className : string | null, percentage : number, lowCoverageFilter : boolean, projectFilesOnlyFilter : boolean, fileNameFilter : string | null) : string | null {
 		if(!className) {
 			return null;
 		}
@@ -125,9 +120,9 @@ export class CodeCoverageHtml {
 			return null;
 		}
 
-		const apexClassFile = path.join(apexClassesDirPath, `${className}.cls`);
-		const apexTriggerFile = path.join(apexTriggersDirPath, `${className}.trigger`);
-		if(projectFilesOnlyFilter && !fs.existsSync(apexClassFile) && !fs.existsSync(apexTriggerFile)) {
+		const apexClassFile : string | undefined = files?.find(file => file.endsWith(`${className}.cls`));
+		const apexTriggerFile : string | undefined  = files?.find(file => file.endsWith(`${className}.trigger`));
+		if(projectFilesOnlyFilter && (!apexClassFile || !fs.existsSync(apexClassFile)) && (!apexTriggerFile || !fs.existsSync(apexTriggerFile))) {
 			return null;
 		}
 
@@ -135,6 +130,8 @@ export class CodeCoverageHtml {
 			return null;
 		}
 
+		let directory = (apexClassFile && path.dirname(apexClassFile)) || (apexTriggerFile && path.dirname(apexTriggerFile));
+		if(directory) { directory = directory.replace(apexClassesDirPath, ''); }
 		let colorClass : string = "";
 
 		if (percentage < 60) {
@@ -150,32 +147,33 @@ export class CodeCoverageHtml {
 		let testClasses = CodeCoverage.getTestClassesForApexClass(className, codeCoverage);
 		const hasTestInfo = testClasses !== null && testClasses.length > 0;
 
-		let content = `
-			<tr id="${className}">
-				<td><span class="apexClassName">${className}</span></td>
-				<td><div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div></td>
-				${!isSmall && hasTestInfo ? '<td><i class="fas fa-chevron-circle-down" title="Show test class coverage contribution" onclick="showInfo(this)"></i></td>' : ""}</td>
-				${!isSmall && !hasTestInfo ? '<td>&nbsp;</td>' : ''}
-			</tr>`;
-
+		let testInfo = '';
 		if(!isSmall) {
 			if(hasTestInfo) {
-				let testInfo = '';
 				testClasses?.forEach(test => {
 					testInfo += `${test.apexClassOrTriggerName}.${test.apexTestMethodName}: ${test.percentage}<br />`;
 				});
-				content += `
-				<tr id="${className}--test" class="collapsible">
-					<td>&nbsp;</td>
-					<td>${testInfo}</td>
-					<td>&nbsp;</td>
-				</tr>`;
-			}
-			else {
-				content += `
-				<tr class="collapsible"><td colspan="3">&nbsp;</td></tr>`;
+				testInfo = `
+				<div id="${className}--test" class="collapsible">
+					${testInfo}
+				</div>`;
 			}
 		}
+
+		let content = `
+			<tr id="${className}">
+				<td>
+					<span class="apexClassName" title="${className}">${className}
+					${!isSmall ? '<br /><small title="' + directory + '">' + directory + '</small>' : ''}
+					</span>
+				</td>
+				<td>
+					<div id="${className}">
+						<div class="progress"><div class="progress-bar ${colorClass}" role="progressbar" style="width: ${coverage}%;" aria-valuenow="${coverage}" aria-valuemin="0" aria-valuemax="100">${coverage}%</div></div>
+						${!isSmall && hasTestInfo ? '<div style="float: right"><i class="fas fa-chevron-circle-down" title="Show test class coverage contribution" onclick="showInfo(this)"></i></div>' + testInfo : ""}
+					</div>
+				</td>
+			</tr>`;
 
 		return content;
 	}
