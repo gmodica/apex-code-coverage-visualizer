@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.8]
+
+- Fix issue with using the extension on a devcontainer on linux where files are case sensitive and the module was not able to find a specific file
+
 ## [0.9.7]
 
 - Shows tests under any other project directory or subdirectory
