@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.9.9]
+
+- Fix issue where Test view was not showing after SFDC Core extension changed the identifier for an opened SFDX project
+
+
 ## [0.9.8]
 
 - Fix issue with using the extension on a devcontainer on linux where files are case sensitive and the module was not able to find a specific file

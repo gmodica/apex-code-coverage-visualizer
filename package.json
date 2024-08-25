@@ -15,7 +15,7 @@
 		"color": "#ECECEC",
 		"theme": "light"
 	},
-	"version": "0.9.8",
+	"version": "0.9.9",
 	"publisher": "modicatech",
 	"engines": {
 		"vscode": "^1.50.0"
@@ -124,7 +124,7 @@
 					"id": "apex-code-coverage-visualizer.test-view",
 					"name": "Apex Tests Coverage",
 					"icon": "$(test-view-icon)",
-					"when": "sfdx:project_opened",
+					"when": "sf:project_opened",
 					"contextualTitle": "Apex Tests Coverage"
 				}
 			]
